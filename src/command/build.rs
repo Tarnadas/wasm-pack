@@ -27,6 +27,7 @@ pub struct Build {
     pub crate_data: manifest::CrateData,
     pub scope: Option<String>,
     pub disable_dts: bool,
+    pub reference_types: bool,
     pub target: Target,
     pub profile: BuildProfile,
     pub mode: InstallMode,
@@ -120,6 +121,11 @@ pub struct BuildOptions {
     /// this flag will disable generating this TypeScript file.
     pub disable_dts: bool,
 
+    #[structopt(long = "reference-types")]
+    /// Enable support for reference types. This feature is hoped to enable more efficient
+    /// communication between the host (JS) and the wasm module, but not yet all browsers support it.
+    pub reference_types: bool,
+
     #[structopt(long = "target", short = "t", default_value = "bundler")]
     /// Sets the target environment. [possible values: bundler, nodejs, web, no-modules]
     pub target: Target,
@@ -165,6 +171,7 @@ impl Default for BuildOptions {
             scope: None,
             mode: InstallMode::default(),
             disable_dts: false,
+            reference_types: false,
             target: Target::default(),
             debug: false,
             dev: false,
@@ -202,6 +209,7 @@ impl Build {
             crate_data,
             scope: build_opts.scope,
             disable_dts: build_opts.disable_dts,
+            reference_types: build_opts.reference_types,
             target: build_opts.target,
             profile,
             mode: build_opts.mode,
@@ -384,6 +392,7 @@ impl Build {
             &self.out_dir,
             &self.out_name,
             self.disable_dts,
+            self.reference_types,
             self.target,
             self.profile,
         )?;
@@ -392,6 +401,9 @@ impl Build {
     }
 
     fn step_run_wasm_opt(&mut self) -> Result<(), Error> {
+        if self.reference_types {
+            return Ok(());
+        }
         let args = match self
             .crate_data
             .configured_profile(self.profile)
